@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from app.schemas.flight import FlightResponse, FlightCreate 
+from app.schemas.flight import FlightResponse, FlightCreate
 
 router = APIRouter()
 
@@ -31,15 +31,19 @@ flights = [
 @router.get("/flights/{flight_id}", response_model=FlightResponse)
 def get_flight(flight_id: int):
 
-    for flight in flights: 
-        if flight["id"] == flight_id: 
+    for flight in flights:
+        if flight["id"] == flight_id:
             return flight
 
-    raise HTTPException(status_code=404, detail="flight not found")
+    raise HTTPException(
+        status_code=404,
+        detail="Flight not found"
+    )
 
 
 @router.post("/flights", response_model=FlightResponse)
 def create_flight(flight: FlightCreate):
+
     new_flight = {
         "id": len(flights) + 1,
         "airline": flight.airline,
@@ -54,3 +58,25 @@ def create_flight(flight: FlightCreate):
     flights.append(new_flight)
 
     return new_flight
+
+
+@router.put("/flights/{flight_id}", response_model=FlightResponse)
+def update_flight(flight_id: int, updated_flight: FlightCreate):
+
+    for flight in flights:
+        if flight["id"] == flight_id:
+            flight["airline"] = updated_flight.airline
+            flight["from"] = updated_flight.from_
+            flight["to"] = updated_flight.to
+            flight["departure"] = updated_flight.departure
+            flight["arrival"] = updated_flight.arrival
+            flight["price"] = updated_flight.price
+            flight["available_seats"] = updated_flight.available_seat
+
+
+        return flight
+
+    raise HTTPException(
+        status_code=404,
+        detail="Flight not found"
+    )
