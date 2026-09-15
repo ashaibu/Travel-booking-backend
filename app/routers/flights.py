@@ -80,3 +80,21 @@ def update_flight(flight_id: int, updated_flight: FlightCreate):
         status_code=404,
         detail="Flight not found"
     )
+
+@router.delete("/flights/{fligth_id}")
+def delete_flight(flight_id: int): 
+
+    for flight in flights:
+            if flight["id"] == flight_id: 
+                flights.remove(flight) 
+                return {"message": "Flight deleted successfully"}
+
+    raise HTTPException(
+        status_code=404,
+        detail="flight not found"
+    )
+
+@router.get("/flights", response_model=list[FlightResponse])
+def get_flights():
+
+    return  flights 
