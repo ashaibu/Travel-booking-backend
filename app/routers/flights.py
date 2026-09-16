@@ -9,30 +9,6 @@ router = APIRouter()
 
 
 
-flights = [
-    {
-        "id": 1,
-        "airline": "Air Peace",
-        "from": "Lagos",
-        "to": "Abuja",
-        "departure": "10:00",
-        "arrival": "11:10",
-        "price": 150000,
-        "available_seats": 24
-    },
-    {
-        "id": 2,
-        "airline": "Ibom Air",
-        "from": "Lagos",
-        "to": "Abuja",
-        "departure": "14:00",
-        "arrival": "15:10",
-        "price": 140000,
-        "available_seats": 18
-    }
-]
-
-
 @router.get("/flights/{flight_id}", response_model=FlightResponse)
 def get_flight(flight_id: int, db: Session = Depends(get_db)):
     flight = db.query(Flight).filter(Flight.id == flight_id).first()
