@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.schemas.flight import FlightResponse, FlightCreate
 from app.database.database import get_db
 from app.models.flight import Flight
+from app.services.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -19,8 +20,13 @@ def get_flight(flight_id: int, db: Session = Depends(get_db)):
     return flight
 
 
+
 @router.post("/flights", response_model=FlightResponse)
-def create_flight(flight: FlightCreate, db: Session = Depends(get_db)):
+def create_flight(
+    flight: FlightCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
     new_flight = Flight(
         airline=flight.airline,
         from_=flight.from_,
@@ -36,8 +42,6 @@ def create_flight(flight: FlightCreate, db: Session = Depends(get_db)):
     db.refresh(new_flight)
 
     return new_flight
-
-
 
 
 @router.put("/flights/{flight_id}", response_model=FlightResponse)
