@@ -1,4 +1,4 @@
-#!/home/student/travel-booking-backend/venv/bin/python3
+#!/home/student/Travel-booking-backend/venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys
