@@ -1,17 +1,17 @@
-from pydantic import BaseModel, Field 
+from pydantic import BaseModel, Field
 
 
 class FlightResponse(BaseModel):
-    id:int 
-    airline: str 
+    id: int
+    airline: str
     from_: str = Field(alias="from")
-    to: str 
-    departure: str 
+    to: str
+    departure: str
     arrival: str
-    price: int 
-    available_seats: int 
+    price: int
+    available_seats: int
 
-    class Config: 
+    class Config:
         populate_by_name = True
 
 

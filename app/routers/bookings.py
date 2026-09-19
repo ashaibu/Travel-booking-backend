@@ -1,3 +1,5 @@
+import secrets 
+
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 
@@ -56,10 +58,13 @@ def create_booking(
 
     transport.available_seats -= 1
 
+    ticket_number = "TKT-" + secrets.token_hex(4).upper()
+
     new_booking = Booking(
         user_id=current_user.id,
         transport_type=booking.transport_type,
         transport_id=booking.transport_id,
+        ticket_number=ticket_number,
         status="confirmed"
     )
 
@@ -68,6 +73,7 @@ def create_booking(
     db.refresh(new_booking)
 
     return new_booking
+
 
 @router.get("", response_model=list[BookingResponse])
 def get_my_bookings(
@@ -155,56 +161,3 @@ def cancel_booking(
     }
 
 
-@router.delete("/{booking_id}")
-def cancel_booking(
-    booking_id: int,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
-):
-    booking = db.query(Booking).filter(
-        Booking.id == booking_id,
-        Booking.user_id == current_user.id
-    ).first()
-
-    if not booking:
-        raise HTTPException(
-            status_code=404,
-            detail="Booking not found"
-        )
-
-    if booking.status == "cancelled":
-        raise HTTPException(
-            status_code=400,
-            detail="Booking is already cancelled"
-        )
-
-    transport = None
-
-    if booking.transport_type == "flight":
-        transport = db.query(Flight).filter(
-            Flight.id == booking.transport_id
-        ).first()
-
-    elif booking.transport_type == "bus":
-        transport = db.query(Bus).filter(
-            Bus.id == booking.transport_id
-        ).first()
-
-    elif booking.transport_type == "ship":
-        transport = db.query(Ship).filter(
-            Ship.id == booking.transport_id
-        ).first()
-
-    if transport:
-        transport.available_seats += 1
-
-    booking.status = "cancelled"
-
-    db.commit()
-    db.refresh(booking)
-
-    return {
-        "message": "Booking cancelled successfully",
-        "booking_id": booking.id,
-        "status": booking.status
-    }

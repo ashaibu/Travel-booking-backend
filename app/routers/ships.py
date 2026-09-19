@@ -33,6 +33,29 @@ def create_ship(
     return new_ship
 
 
+
+@router.get("/ships", response_model=list[ShipResponse])
+def get_ships(db: Session = Depends(get_db)):
+    ships = db.query(Ship).all()
+    return ships
+
+
+@router.get("/ships/{ship_id}", response_model=ShipResponse)
+def get_ship(
+    ship_id: int,
+    db: Session = Depends(get_db)
+):
+    ship = db.query(Ship).filter(Ship.id == ship_id).first()
+
+    if not ship:
+        raise HTTPException(
+            status_code=404,
+            detail="Ship not found"
+        )
+
+    return ship
+
+
 @router.put("/ships/{ship_id}", response_model=ShipResponse)
 def update_ship(
     ship_id: int,

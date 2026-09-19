@@ -32,6 +32,30 @@ def create_bus(
     return new_bus
 
 
+
+
+@router.get("/buses", response_model=list[BusResponse])
+def get_buses(db: Session = Depends(get_db)):
+    buses = db.query(Bus).all()
+    return buses
+
+
+@router.get("/buses/{bus_id}", response_model=BusResponse)
+def get_bus(
+    bus_id: int,
+    db: Session = Depends(get_db)
+):
+    bus = db.query(Bus).filter(Bus.id == bus_id).first()
+
+    if not bus:
+        raise HTTPException(
+            status_code=404,
+            detail="Bus not found"
+        )
+
+    return bus
+
+
 @router.put("/buses/{bus_id}", response_model=BusResponse)
 def update_bus(
     bus_id: int,
