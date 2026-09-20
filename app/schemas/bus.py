@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 
 
-class ShipResponse(BaseModel):
+class BusResponse(BaseModel):
     id: int
     operator: str
     from_: str = Field(alias="from")
@@ -15,7 +15,7 @@ class ShipResponse(BaseModel):
         populate_by_name = True
 
 
-class ShipCreate(BaseModel):
+class BusCreate(BaseModel):
     operator: str = Field(min_length=2)
     from_: str = Field(alias="from", min_length=2)
     to: str = Field(min_length=2)
