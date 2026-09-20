@@ -9,7 +9,7 @@ from app.models.flight import Flight
 from app.models.bus import Bus
 from app.models.ship import Ship
 from app.schemas.booking import BookingCreate, BookingResponse
-from app.services.dependencies import get_current_user
+from app.services.dependencies import get_current_user, get_current_admin  
 
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
@@ -85,6 +85,17 @@ def get_my_bookings(
     ).all()
 
     return bookings
+
+
+@router.get("/admin/all", response_model=list[BookingResponse])
+def get_all_bookings(
+    db: Session = Depends(get_db),
+    current_admin=Depends(get_current_admin)
+):
+    bookings = db.query(Booking).all()
+
+    return bookings
+
 
 @router.get("/{booking_id}", response_model=BookingResponse)
 def get_booking(

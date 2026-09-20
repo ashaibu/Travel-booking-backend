@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.schemas.ship import ShipResponse, ShipCreate
 from app.database.database import get_db
 from app.models.ship import Ship
-from app.services.dependencies import get_current_user 
+from app.services.dependencies import get_current_admin
 
 
 router = APIRouter()
@@ -14,7 +14,7 @@ router = APIRouter()
 def create_ship(
     ship: ShipCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_admin) 
 ):
     new_ship = Ship(
         operator=ship.operator,
@@ -60,7 +60,8 @@ def get_ship(
 def update_ship(
     ship_id: int,
     updated_ship: ShipCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_admin)
 ):
     ship = db.query(Ship).filter(Ship.id == ship_id).first()
 
@@ -82,9 +83,11 @@ def update_ship(
 
 
 @router.delete("/ships/{ship_id}")
-def delete_ship(ship_id: int, db: Session = Depends(get_db)):
-    ship = db.query(Ship).filter(Ship.id == ship_id).first()
-
+def delete_ship(
+    ship_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_admin)
+):
     if not ship:
         raise HTTPException(status_code=404, detail="Ship not found")
 

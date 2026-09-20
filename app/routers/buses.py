@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.schemas.bus import BusResponse, BusCreate
 from app.database.database import get_db
 from app.models.bus import Bus
-from app.services.dependencies import get_current_user
+from app.services.dependencies import get_current_admin 
 
 router = APIRouter()
 
@@ -13,7 +13,7 @@ router = APIRouter()
 def create_bus(
     bus: BusCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_admin) 
 ):
     new_bus = Bus(
         operator=bus.operator,
@@ -60,7 +60,8 @@ def get_bus(
 def update_bus(
     bus_id: int,
     updated_bus: BusCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_admin)
 ):
     bus = db.query(Bus).filter(Bus.id == bus_id).first()
 
@@ -82,16 +83,21 @@ def update_bus(
 
 
 @router.delete("/buses/{bus_id}")
-def delete_bus(bus_id: int, db: Session = Depends(get_db)):
+def delete_bus(
+    bus_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_admin)
+):
     bus = db.query(Bus).filter(Bus.id == bus_id).first()
 
     if not bus:
-        raise HTTPException(status_code=404, detail="Bus not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Bus not found"
+        )
 
     db.delete(bus)
     db.commit()
 
     return {"message": "Bus deleted successfully"}
-
-
 

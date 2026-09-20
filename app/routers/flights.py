@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.schemas.flight import FlightResponse, FlightCreate
 from app.database.database import get_db
 from app.models.flight import Flight
-from app.services.dependencies import get_current_user
+from app.services.dependencies import get_current_admin 
 
 router = APIRouter()
 
@@ -25,7 +25,7 @@ def get_flight(flight_id: int, db: Session = Depends(get_db)):
 def create_flight(
     flight: FlightCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_admin) 
 ):
     new_flight = Flight(
         airline=flight.airline,
@@ -48,7 +48,8 @@ def create_flight(
 def update_flight(
     flight_id: int,
     updated_flight: FlightCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_admin)
 ):
     flight = db.query(Flight).filter(Flight.id == flight_id).first()
 
@@ -71,9 +72,11 @@ def update_flight(
 
 
 @router.delete("/flights/{flight_id}")
-def delete_flight(flight_id: int, db: Session = Depends(get_db)):
-    flight = db.query(Flight).filter(Flight.id == flight_id).first()
-
+def delete_flight(
+    flight_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_admin)
+):
     if not flight:
         raise HTTPException(status_code=404, detail="Flight not found")
 
