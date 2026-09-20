@@ -134,11 +134,11 @@ def cancel_booking(
             detail="Booking not found"
         )
 
-    if booking.status == "cancelled":
+    if booking.status != "confirmed":
         raise HTTPException(
-            status_code=400,
-            detail="Booking is already cancelled"
-        )
+           status_code=400,
+           detail=f"Booking cannot be cancelled because its status is '{booking.status}'"
+    )
 
     transport = None
 
