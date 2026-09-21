@@ -1,7 +1,8 @@
-import secrets 
+import secrets
 
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.database.database import get_db
 from app.models.booking import Booking
@@ -9,7 +10,7 @@ from app.models.flight import Flight
 from app.models.bus import Bus
 from app.models.ship import Ship
 from app.schemas.booking import BookingCreate, BookingResponse
-from app.services.dependencies import get_current_user, get_current_admin  
+from app.services.dependencies import get_current_user, get_current_admin
 
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
@@ -69,8 +70,16 @@ def create_booking(
     )
 
     db.add(new_booking)
-    db.commit()
-    db.refresh(new_booking)
+
+    try:
+        db.commit()
+        db.refresh(new_booking)
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Could not create booking"
+        )
 
     return new_booking
 
@@ -162,13 +171,19 @@ def cancel_booking(
 
     booking.status = "cancelled"
 
-    db.commit()
-    db.refresh(booking)
+    try:
+        db.commit()
+        db.refresh(booking)
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Could not cancel booking"
+        )
 
     return {
         "message": "Booking cancelled successfully",
         "booking_id": booking.id,
         "status": booking.status
     }
-
 
