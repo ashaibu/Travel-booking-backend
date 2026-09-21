@@ -136,9 +136,9 @@ def cancel_booking(
 
     if booking.status != "confirmed":
         raise HTTPException(
-           status_code=400,
-           detail=f"Booking cannot be cancelled because its status is '{booking.status}'"
-    )
+            status_code=400,
+            detail=f"Booking cannot be cancelled because its status is '{booking.status}'"
+        )
 
     transport = None
 
