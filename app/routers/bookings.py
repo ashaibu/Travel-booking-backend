@@ -3,7 +3,7 @@ import secrets
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy import update
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 from app.database.database import get_db
 from app.models.booking import Booking
@@ -101,6 +101,12 @@ def create_booking(
     try:
         db.commit()
         db.refresh(new_booking)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Could not create booking because the ticket number already exists"
+        )
     except SQLAlchemyError:
         db.rollback()
         raise HTTPException(
