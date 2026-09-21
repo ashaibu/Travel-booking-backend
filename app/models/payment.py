@@ -37,6 +37,11 @@ class Payment(Base):
         index=True
     )
 
+    payment_link = Column(
+    String,
+    nullable=True
+)
+
     amount = Column(
         Integer,
         nullable=False

@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import flights, buses, ships, auth, bookings, users
+from app.routers import flights, buses, ships, auth, bookings, users, payments 
 
 
 load_dotenv()
@@ -33,3 +33,4 @@ app.include_router(ships.router)
 app.include_router(auth.router)
 app.include_router(bookings.router)
 app.include_router(users.router)
+app.include_router(payments.router) 
