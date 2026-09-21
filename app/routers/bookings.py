@@ -193,9 +193,13 @@ def cancel_booking(
             Ship.id == booking.transport_id
         ).first()
 
-    if transport:
-        transport.available_seats += 1
+    if not transport:
+        raise HTTPException(
+            status_code=500,
+            detail="Transport associated with booking was not found"
+        )
 
+    transport.available_seats += 1
     booking.status = "cancelled"
 
     try:
@@ -213,4 +217,3 @@ def cancel_booking(
         "booking_id": booking.id,
         "status": booking.status
     }
-
