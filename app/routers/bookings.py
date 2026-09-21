@@ -1,6 +1,7 @@
 import secrets
 
 from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -51,13 +52,39 @@ def create_booking(
             detail="Transport not found"
         )
 
-    if transport.available_seats <= 0:
+    seat_update = None
+
+    if booking.transport_type == "flight":
+        seat_update = update(Flight).where(
+            Flight.id == booking.transport_id,
+            Flight.available_seats > 0
+        ).values(
+            available_seats=Flight.available_seats - 1
+        )
+
+    elif booking.transport_type == "bus":
+        seat_update = update(Bus).where(
+            Bus.id == booking.transport_id,
+            Bus.available_seats > 0
+        ).values(
+            available_seats=Bus.available_seats - 1
+        )
+
+    elif booking.transport_type == "ship":
+        seat_update = update(Ship).where(
+            Ship.id == booking.transport_id,
+            Ship.available_seats > 0
+        ).values(
+            available_seats=Ship.available_seats - 1
+        )
+
+    result = db.execute(seat_update)
+
+    if result.rowcount == 0:
         raise HTTPException(
             status_code=400,
             detail="No available seats"
         )
-
-    transport.available_seats -= 1
 
     ticket_number = "TKT-" + secrets.token_hex(4).upper()
 
