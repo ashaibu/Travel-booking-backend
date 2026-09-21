@@ -1,4 +1,11 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    ForeignKey,
+    DateTime,
+    CheckConstraint
+)
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -7,6 +14,13 @@ from app.database.database import Base
 
 class Payment(Base):
     __tablename__ = "payments"
+
+    __table_args__ = (
+        CheckConstraint(
+            "amount >= 0",
+            name="check_payment_amount_non_negative"
+        ),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
 
@@ -23,7 +37,10 @@ class Payment(Base):
         index=True
     )
 
-    amount = Column(Integer, nullable=False)
+    amount = Column(
+        Integer,
+        nullable=False
+    )
 
     status = Column(
         String,
