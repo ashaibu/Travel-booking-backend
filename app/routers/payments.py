@@ -1,6 +1,7 @@
 import secrets
+import json
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
@@ -13,6 +14,7 @@ from app.schemas.payment import (
 )
 from app.services.dependencies import get_current_user
 from app.services.flutterwave import (
+    FLW_SECRET_HASH,
     initialize_payment,
     verify_transaction,
 )
@@ -22,6 +24,157 @@ router = APIRouter(
     prefix="/payments",
     tags=["Payments"],
 )
+
+
+@router.post("/webhook")
+async def flutterwave_webhook(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Receive and securely process Flutterwave webhook events.
+    """
+
+    # 1. Make sure the webhook secret is configured
+    if not FLW_SECRET_HASH:
+        raise HTTPException(
+            status_code=500,
+            detail="Flutterwave webhook secret is not configured",
+        )
+
+    # 2. Flutterwave sends the configured secret hash
+    #    in the verif-hash header.
+    signature = request.headers.get("verif-hash")
+
+    if not signature:
+        raise HTTPException(
+            status_code=401,
+            detail="Missing Flutterwave signature",
+        )
+
+    # 3. Compare the received hash with our secret hash.
+    if signature != FLW_SECRET_HASH:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid Flutterwave signature",
+        )
+
+    # 4. Read the webhook body
+    body = await request.body()
+
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid webhook payload",
+        )
+
+    # 5. Get transaction data
+    transaction_data = payload.get("data", {})
+
+    transaction_id = transaction_data.get("id")
+    tx_ref = transaction_data.get("tx_ref")
+
+    if not transaction_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Transaction ID missing from webhook",
+        )
+
+    if not tx_ref:
+        raise HTTPException(
+            status_code=400,
+            detail="Transaction reference missing from webhook",
+        )
+
+    # 6. Find our payment using Flutterwave's transaction reference
+    payment = (
+        db.query(Payment)
+        .filter(Payment.reference == tx_ref)
+        .first()
+    )
+
+    if not payment:
+        raise HTTPException(
+            status_code=404,
+            detail="Payment record not found",
+        )
+
+    # 7. Idempotency:
+    #    If this webhook has already successfully paid the
+    #    payment, don't process it again.
+    if payment.status == "paid":
+        return {
+            "message": "Payment already processed",
+            "payment_id": payment.id,
+            "reference": payment.reference,
+            "status": payment.status,
+        }
+
+    # 8. NEVER trust the webhook payload alone.
+    #    Verify the transaction directly with Flutterwave.
+    transaction = verify_transaction(transaction_id)
+
+    verified_data = transaction.get(
+        "data",
+        {},
+    )
+
+    verified_tx_ref = verified_data.get("tx_ref")
+    verified_amount = verified_data.get("amount")
+    verified_currency = verified_data.get("currency")
+    verified_status = verified_data.get("status")
+
+    # 9. Make sure the verified reference matches our payment
+    if verified_tx_ref != payment.reference:
+        raise HTTPException(
+            status_code=400,
+            detail="Transaction reference does not match payment",
+        )
+
+    # 10. Make sure the amount matches
+    if verified_amount != payment.amount:
+        raise HTTPException(
+            status_code=400,
+            detail="Payment amount does not match booking amount",
+        )
+
+    # 11. Make sure the currency matches
+    if verified_currency != "NGN":
+        raise HTTPException(
+            status_code=400,
+            detail="Payment currency does not match expected currency",
+        )
+
+    # 12. Handle unsuccessful payment
+    if verified_status != "successful":
+        payment.status = "failed"
+
+        db.commit()
+
+        return {
+            "message": "Payment was not successful",
+            "payment_id": payment.id,
+            "reference": payment.reference,
+            "status": payment.status,
+        }
+
+    # 13. Payment is genuinely successful
+    payment.status = "paid"
+
+    db.commit()
+    db.refresh(payment)
+
+    return {
+        "message": "Payment processed successfully",
+        "payment_id": payment.id,
+        "booking_id": payment.booking_id,
+        "reference": payment.reference,
+        "amount": payment.amount,
+        "currency": verified_currency,
+        "status": payment.status,
+    }
 
 
 @router.post(
@@ -144,6 +297,7 @@ def initialize_booking_payment(
 
     # Save the Flutterwave payment link
     payment.payment_link = payment_link
+
     db.commit()
     db.refresh(payment)
 
@@ -229,6 +383,20 @@ def verify_booking_payment(
             detail="Booking not found",
         )
 
+    # Idempotency:
+    # If the payment was already successfully processed,
+    # don't change it back to another status.
+    if payment.status == "paid":
+        return {
+            "message": "Payment already verified",
+            "payment_id": payment.id,
+            "booking_id": payment.booking_id,
+            "reference": payment.reference,
+            "amount": payment.amount,
+            "currency": "NGN",
+            "status": payment.status,
+        }
+
     if amount != payment.amount:
         raise HTTPException(
             status_code=400,
@@ -243,6 +411,7 @@ def verify_booking_payment(
 
     if status != "successful":
         payment.status = "failed"
+
         db.commit()
 
         raise HTTPException(
@@ -251,6 +420,7 @@ def verify_booking_payment(
         )
 
     payment.status = "paid"
+
     db.commit()
     db.refresh(payment)
 

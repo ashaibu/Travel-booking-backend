@@ -7,9 +7,15 @@ from fastapi import HTTPException
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
-load_dotenv(BASE_DIR / ".env", override=True)
+
+load_dotenv(
+    BASE_DIR / ".env",
+    override=True,
+)
+
 
 FLW_SECRET_KEY = os.getenv("FLW_SECRET_KEY")
+FLW_SECRET_HASH = os.getenv("FLW_SECRET_HASH")
 
 FLW_BASE_URL = "https://api.flutterwave.com/v3"
 
@@ -22,20 +28,23 @@ def initialize_payment(
     customer_email: str,
     customer_name: str,
 ):
+    """Create a Flutterwave hosted payment and return its payment link."""
+
     if not FLW_SECRET_KEY:
-        raise RuntimeError("FLW_SECRET_KEY is not configured")
+        raise RuntimeError(
+            "FLW_SECRET_KEY is not configured"
+        )
 
     payload = {
-    "tx_ref": tx_ref,
-    "amount": amount,
-    "currency": currency,
-    "redirect_url": redirect_url,
-    "customer": {
-        "email": customer_email,
-        "name": customer_name,
-    },
-}
-
+        "tx_ref": tx_ref,
+        "amount": amount,
+        "currency": currency,
+        "redirect_url": redirect_url,
+        "customer": {
+            "email": customer_email,
+            "name": customer_name,
+        },
+    }
 
     headers = {
         "Authorization": f"Bearer {FLW_SECRET_KEY}",
@@ -81,8 +90,12 @@ def initialize_payment(
 
 
 def verify_transaction(transaction_id: int):
+    """Verify a Flutterwave transaction by transaction ID."""
+
     if not FLW_SECRET_KEY:
-        raise RuntimeError("FLW_SECRET_KEY is not configured")
+        raise RuntimeError(
+            "FLW_SECRET_KEY is not configured"
+        )
 
     headers = {
         "Authorization": f"Bearer {FLW_SECRET_KEY}",
@@ -91,7 +104,8 @@ def verify_transaction(transaction_id: int):
 
     try:
         response = httpx.get(
-            f"{FLW_BASE_URL}/transactions/{transaction_id}/verify",
+            f"{FLW_BASE_URL}/transactions/"
+            f"{transaction_id}/verify",
             headers=headers,
             timeout=30.0,
         )
