@@ -56,7 +56,7 @@ class Payment(Base):
     provider = Column(
         String,
         nullable=False,
-        default="paystack"
+        default="flutterwave"
     )
 
     created_at = Column(
