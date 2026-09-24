@@ -11,6 +11,18 @@
 
 const API_BASE_URL = 'http://127.0.0.1:8000'; // VERIFY: confirm no further /api prefix in /docs
 
+// FastAPI validation errors return detail as an array of objects, e.g.
+// { detail: [{ loc: [...], msg: "field required", type: "..." }] }
+// This turns that (or a plain string detail) into readable text.
+function formatApiError(err, fallbackMessage) {
+    if (!err || !err.detail) return fallbackMessage;
+    if (typeof err.detail === 'string') return err.detail;
+    if (Array.isArray(err.detail)) {
+        return err.detail.map(e => e.msg || JSON.stringify(e)).join('; ');
+    }
+    return JSON.stringify(err.detail);
+}
+
 const ApiService = {
     async register(userData) {
         // VERIFY: exact path — likely /auth/register — and field names (name/email/password?)
@@ -21,7 +33,7 @@ const ApiService = {
         });
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            throw new Error(err.detail || `Registration failed (${res.status})`);
+            throw new Error(formatApiError(err, `Registration failed (${res.status})`));
         }
         return await res.json();
     },
@@ -38,7 +50,7 @@ const ApiService = {
         });
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            throw new Error(err.detail || `Login failed (${res.status})`);
+            throw new Error(formatApiError(err, `Login failed (${res.status})`));
         }
         const data = await res.json();
         // VERIFY: confirm the token field is actually called 'access_token'
@@ -65,7 +77,7 @@ const ApiService = {
         const res = await fetch(`${API_BASE_URL}/${route}?${params.toString()}`);
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            throw new Error(err.detail || `Trip search failed (${res.status})`);
+            throw new Error(formatApiError(err, `Trip search failed (${res.status})`));
         }
         return await res.json();
     },
@@ -84,7 +96,7 @@ const ApiService = {
         });
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            throw new Error(err.detail || `Booking failed (${res.status})`);
+            throw new Error(formatApiError(err, `Booking failed (${res.status})`));
         }
         return await res.json();
     },
@@ -104,7 +116,7 @@ const ApiService = {
         });
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            throw new Error(err.detail || `Payment failed (${res.status})`);
+            throw new Error(formatApiError(err, `Payment failed (${res.status})`));
         }
         return await res.json();
     }
