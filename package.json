@@ -1,0 +1,13 @@
+{
+  "name": "conote-travel-freight-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for Air, Sea, and Land Travel & Freight Booking Platform",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}
