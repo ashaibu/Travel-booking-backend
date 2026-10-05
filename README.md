@@ -1,194 +1,127 @@
-# Travel-booking-backend
+# TravelGroup — Multimodal Travel Booking Platform
 
+FastAPI backend + static HTML/Tailwind/vanilla JS frontend, one repo, same
+pattern as ASAA Travel but with a real SQLite database instead of
+in-memory state, JWT auth instead of localStorage-only "sessions", and
+**server-side Flutterwave payment verification** instead of trusting the
+browser callback.
 
-> **🚧 Project Status:** This project is actively under development. The README will be updated as new features, endpoints, and functionality are added.
-
-
-
-
-# ✈️ Travel Booking Backend
-
-A Python-based backend for a travel booking application. The project is currently focused on building and testing REST API endpoints that will form the foundation of a larger travel booking system.
-
-## 📌 Current Status
-
-The backend currently has **two working API endpoints**:
-
-| Method | Endpoint   | Response           |
-| ------ | ---------- | ------------------ |
-| GET    | `/health`  | `{"status": "ok"}` |
-| GET    | `/flights` | `{"flights": []}`  |
-
-The `/health` endpoint confirms that the server is running, while `/flights` provides the initial structure for retrieving available flights.
-
-## 🛠️ Technologies
-
-* Python 3
-* Flask
-* REST API
-* JSON
-* Git & GitHub
-
-## 📁 Project Structure
-
-```text
-travel-booking-backend/
-│
-├── main.py
-├── requirements.txt
-├── README.md
-└── ...
-```
-
-## 🚀 Getting Started
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/YOUR-USERNAME/travel-booking-backend.git
-```
-
-Then enter the project directory:
-
-```bash
-cd travel-booking-backend
-```
-
-### 2. Create a virtual environment
-
-```bash
-python3 -m venv venv
-```
-
-Activate it on Linux/macOS:
-
-```bash
-source venv/bin/activate
-```
-
-On Windows:
-
-```bash
-venv\Scripts\activate
-```
-
-### 3. Install dependencies
+## Running it
 
 ```bash
 pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
 ```
 
-## ▶️ Running the Backend
+Visit `http://localhost:8000`. A `travel.db` SQLite file is created
+automatically, and an admin account is seeded on first startup (see
+Environment Variables below for the login).
 
-Start the server with:
+## Running the tests
 
 ```bash
-python3 main.py
+pytest
 ```
 
-The API will be available locally at:
+10 tests, all passing — covers register/login, admin trip CRUD, trip
+search per mode, booking creation + seat reservation, per-user "My
+Tickets" scoping, payment initiation, and booking cancellation + seat
+release. (Payment *verification* isn't tested — it calls the real
+Flutterwave API with the secret key, which needs live sandbox
+credentials and network access this test suite doesn't have.)
 
-```text
-http://127.0.0.1:5000
+## Who owns what
+
+```
+travel-group-project/
+├── app/
+│   ├── main.py                  Person 1 — app entrypoint, routers, static mount, admin seed
+│   ├── database.py              Person 1 — SQLAlchemy engine/session
+│   ├── auth.py                  Person 1 — password hashing + JWT
+│   ├── schemas.py                Person 1 — request/response shapes
+│   ├── models/                  split by owner:
+│   │   ├── user.py               Person 1 — User
+│   │   ├── trip.py               Person 1 — Trip (flights/buses/ships share this table via `mode`)
+│   │   ├── booking.py            Person 3 — Booking
+│   │   └── payment.py            Person 3 — Payment
+│   ├── services/
+│   │   └── trips.py             Person 1 — shared search/CRUD logic used by all 3 mode routers
+│   ├── routers/
+│   │   ├── auth.py               Person 1 — register/login
+│   │   ├── users.py              Person 1 — profile (GET/PUT /users/me)
+│   │   ├── flights.py            Person 1 — GET /flights (mode="flight")
+│   │   ├── buses.py              Person 1 — GET /buses   (mode="bus")
+│   │   ├── ships.py              Person 1 — GET /ships   (mode="ship")
+│   │   ├── bookings.py           Person 3 — seat reservation, booking ref, cancellation
+│   │   ├── payments.py           Person 3 — Flutterwave initiate + SERVER-SIDE verify
+│   │   └── admin.py              Person 4 — trip CRUD, bookings/payments/users oversight
+│   └── static/                  Person 2 (you):
+│       ├── index.html            Home — mode tabs + search
+│       ├── search.html           Results list
+│       ├── trip-details.html     Single trip + Book button
+│       ├── login.html / register.html
+│       ├── checkout.html         Passenger details + Flutterwave launch
+│       ├── booking-confirmation.html
+│       ├── my-tickets.html       Booking history
+│       ├── profile.html
+│       ├── admin.html            Person 4 — dashboard UI (trip management + bookings table)
+│       ├── css/style.css         Person 2 / 4 — dark theme
+│       └── js/
+│           ├── api.js            Person 2 — every backend call lives here
+│           └── app.js            Person 2 — per-page logic, dispatched by <body data-page="...">
+├── tests/
+│   └── test_app.py              Person 4 — pytest suite (isolated in-memory test DB)
+├── requirements.txt
+└── README.md
 ```
 
-## 🔌 API Endpoints
+## Environment variables
 
-### 1. Health Check
+| Key | Purpose | Default (local dev) |
+|---|---|---|
+| `DATABASE_URL` | SQLAlchemy connection string | `sqlite:///./travel.db` |
+| `JWT_SECRET` | Signs auth tokens — **set a real one in production** | `dev-secret-change-me` |
+| `JWT_EXPIRE_MINUTES` | Token lifetime | `1440` (24h) |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Seeded admin login | `admin@travelgroup.ng` / `adminpassword123` |
+| `FLUTTERWAVE_PUBLIC_KEY` | Sent to the browser for checkout | test placeholder |
+| `FLUTTERWAVE_SECRET_KEY` | Used server-side to verify payments — **never expose this** | test placeholder |
 
-**GET `/health`**
+## How the pieces connect
 
-This endpoint checks whether the backend server is running correctly.
-
-Example request:
-
-```bash
-curl http://127.0.0.1:5000/health
+```
+Browser (Person 2's static pages)
+     │  fetch() via js/api.js, JWT in Authorization header
+     ▼
+FastAPI routers (Person 1: auth/users/flights/buses/ships,
+                 Person 3: bookings/payments,
+                 Person 4: admin)
+     │  SQLAlchemy session
+     ▼
+SQLite (travel.db) — Users, Trips, Bookings, Payments
 ```
 
-Response:
-
-```json
-{
-  "status": "ok"
-}
+Booking + payment flow (checkout.html → app.js → api.js):
+```
+POST /bookings            → seat reserved, status="pending_payment"
+POST /payments/initiate   → returns Flutterwave public key + tx_ref
+FlutterwaveCheckout(...)  → browser opens payment modal
+callback                  → POST /payments/verify
+                              → backend calls Flutterwave's verify
+                                endpoint SERVER-SIDE with the secret key,
+                                checks amount/currency/status itself
+                              → only THEN does status flip to "confirmed"
 ```
 
-### 2. Flights
+## Notes for whoever picks up Person 3 or Person 4's work next
 
-**GET `/flights`**
-
-This endpoint returns the currently available flights.
-
-Example request:
-
-```bash
-curl http://127.0.0.1:5000/flights
-```
-
-Current response:
-
-```json
-{
-  "flights": []
-}
-```
-
-The empty array indicates that flight data has not yet been added.
-
-## 🧪 Testing the API
-
-You can test the endpoints using a browser, Postman, or `curl`.
-
-### Health endpoint
-
-```bash
-curl http://127.0.0.1:5000/health
-```
-
-Expected:
-
-```json
-{
-  "status": "ok"
-}
-```
-
-### Flights endpoint
-
-```bash
-curl http://127.0.0.1:5000/flights
-```
-
-Expected:
-
-```json
-{
-  "flights": []
-}
-```
-
-## 🗺️ Next Steps
-
-The backend will be expanded gradually. Planned functionality includes:
-
-* [ ] Add flight data
-* [ ] Search for flights
-* [ ] Create flight bookings
-* [ ] Retrieve booking information
-* [ ] Cancel bookings
-* [ ] Add database integration
-* [ ] Add input validation
-* [ ] Add automated tests
-* [ ] Add authentication
-* [ ] Connect the backend to a frontend
-
-## 👨‍💻 Author
-
-**Abraham Adejoh Shaibu**
-
-This project is part of my backend development learning journey, focused on learning Python, APIs, HTTP methods, and building real-world backend applications.
-
-## 📄 License
-
-This project is currently intended for educational and development purposes.
+- **Refunds** (`bookings.py::cancel_booking`) are stubbed — cancelling a
+  *paid* booking releases the seat but doesn't call Flutterwave's refund
+  API yet. Needs live secret-key credentials to build against.
+- **Admin bookings/payments tables** are read-only in `admin.html` right
+  now — no edit/refund actions wired up from the UI yet.
+- Two real bugs came up building this that are worth knowing about if
+  you touch auth: (1) `passlib`'s bcrypt backend breaks on
+  `bcrypt>=4.1` — keep the `bcrypt==4.0.1` pin in `requirements.txt`
+  unless you upgrade passlib too; (2) pydantic's `EmailStr` rejects
+  RFC 2606 reserved domains (`example.com`, anything ending `.test`)
+  — don't use those in seed data, fixtures, or demo accounts.

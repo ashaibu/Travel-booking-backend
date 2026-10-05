@@ -1,97 +1,32 @@
-from fastapi import APIRouter, HTTPException, Depends
+"""PERSON 1 — BACKEND DEVELOPER — ships (mode="ship" over the shared Trip table)."""
+
+from datetime import date
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.schemas.ship import ShipResponse, ShipCreate
-from app.database.database import get_db
-from app.models.ship import Ship
-from app.services.dependencies import get_current_admin
+from app.database import get_db
+from app.models import TripMode
+from app.schemas import TripOut
+from app.services import trips as trip_service
+
+router = APIRouter(prefix="/ships", tags=["ships"])
 
 
-router = APIRouter()
-
-
-@router.post("/ships", response_model=ShipResponse)
-def create_ship(
-    ship: ShipCreate,
+@router.get("", response_model=list[TripOut])
+def list_ships(
+    origin: Optional[str] = None,
+    destination: Optional[str] = None,
+    travel_date: Optional[date] = None,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_admin) 
 ):
-    new_ship = Ship(
-        operator=ship.operator,
-        from_=ship.from_,
-        to=ship.to,
-        departure=ship.departure,
-        arrival=ship.arrival,
-        price=ship.price,
-        available_seats=ship.available_seats
-    )
-
-    db.add(new_ship)
-    db.commit()
-    db.refresh(new_ship)
-
-    return new_ship
+    return trip_service.search_trips(db, TripMode.ship, origin, destination, travel_date)
 
 
-
-@router.get("/ships", response_model=list[ShipResponse])
-def get_ships(db: Session = Depends(get_db)):
-    ships = db.query(Ship).all()
-    return ships
-
-
-@router.get("/ships/{ship_id}", response_model=ShipResponse)
-def get_ship(
-    ship_id: int,
-    db: Session = Depends(get_db)
-):
-    ship = db.query(Ship).filter(Ship.id == ship_id).first()
-
-    if not ship:
-        raise HTTPException(
-            status_code=404,
-            detail="Ship not found"
-        )
-
-    return ship
-
-
-@router.put("/ships/{ship_id}", response_model=ShipResponse)
-def update_ship(
-    ship_id: int,
-    updated_ship: ShipCreate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_admin)
-):
-    ship = db.query(Ship).filter(Ship.id == ship_id).first()
-
-    if not ship:
+@router.get("/{ship_id}", response_model=TripOut)
+def get_ship(ship_id: int, db: Session = Depends(get_db)):
+    trip = trip_service.get_trip(db, ship_id)
+    if not trip or trip.mode != TripMode.ship:
         raise HTTPException(status_code=404, detail="Ship not found")
-
-    ship.operator = updated_ship.operator
-    ship.from_ = updated_ship.from_
-    ship.to = updated_ship.to
-    ship.departure = updated_ship.departure
-    ship.arrival = updated_ship.arrival
-    ship.price = updated_ship.price
-    ship.available_seats = updated_ship.available_seats
-
-    db.commit()
-    db.refresh(ship)
-
-    return ship
-
-
-@router.delete("/ships/{ship_id}")
-def delete_ship(
-    ship_id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_admin)
-):
-    if not ship:
-        raise HTTPException(status_code=404, detail="Ship not found")
-
-    db.delete(ship)
-    db.commit()
-
-    return {"message": "Ship deleted successfully"}
+    return trip

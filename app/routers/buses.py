@@ -1,103 +1,32 @@
-from fastapi import APIRouter, HTTPException, Depends
+"""PERSON 1 — BACKEND DEVELOPER — buses (mode="bus" over the shared Trip table)."""
+
+from datetime import date
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.schemas.bus import BusResponse, BusCreate
-from app.database.database import get_db
-from app.models.bus import Bus
-from app.services.dependencies import get_current_admin 
+from app.database import get_db
+from app.models import TripMode
+from app.schemas import TripOut
+from app.services import trips as trip_service
 
-router = APIRouter()
+router = APIRouter(prefix="/buses", tags=["buses"])
 
 
-@router.post("/buses", response_model=BusResponse)
-def create_bus(
-    bus: BusCreate,
+@router.get("", response_model=list[TripOut])
+def list_buses(
+    origin: Optional[str] = None,
+    destination: Optional[str] = None,
+    travel_date: Optional[date] = None,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_admin) 
 ):
-    new_bus = Bus(
-        operator=bus.operator,
-        from_=bus.from_,
-        to=bus.to,
-        departure=bus.departure,
-        arrival=bus.arrival,
-        price=bus.price,
-        available_seats=bus.available_seats
-    )
-
-    db.add(new_bus)
-    db.commit()
-    db.refresh(new_bus)
-
-    return new_bus
+    return trip_service.search_trips(db, TripMode.bus, origin, destination, travel_date)
 
 
-
-
-@router.get("/buses", response_model=list[BusResponse])
-def get_buses(db: Session = Depends(get_db)):
-    buses = db.query(Bus).all()
-    return buses
-
-
-@router.get("/buses/{bus_id}", response_model=BusResponse)
-def get_bus(
-    bus_id: int,
-    db: Session = Depends(get_db)
-):
-    bus = db.query(Bus).filter(Bus.id == bus_id).first()
-
-    if not bus:
-        raise HTTPException(
-            status_code=404,
-            detail="Bus not found"
-        )
-
-    return bus
-
-
-@router.put("/buses/{bus_id}", response_model=BusResponse)
-def update_bus(
-    bus_id: int,
-    updated_bus: BusCreate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_admin)
-):
-    bus = db.query(Bus).filter(Bus.id == bus_id).first()
-
-    if not bus:
+@router.get("/{bus_id}", response_model=TripOut)
+def get_bus(bus_id: int, db: Session = Depends(get_db)):
+    trip = trip_service.get_trip(db, bus_id)
+    if not trip or trip.mode != TripMode.bus:
         raise HTTPException(status_code=404, detail="Bus not found")
-
-    bus.operator = updated_bus.operator
-    bus.from_ = updated_bus.from_
-    bus.to = updated_bus.to
-    bus.departure = updated_bus.departure
-    bus.arrival = updated_bus.arrival
-    bus.price = updated_bus.price
-    bus.available_seats = updated_bus.available_seats
-
-    db.commit()
-    db.refresh(bus)
-
-    return bus
-
-
-@router.delete("/buses/{bus_id}")
-def delete_bus(
-    bus_id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_admin)
-):
-    bus = db.query(Bus).filter(Bus.id == bus_id).first()
-
-    if not bus:
-        raise HTTPException(
-            status_code=404,
-            detail="Bus not found"
-        )
-
-    db.delete(bus)
-    db.commit()
-
-    return {"message": "Bus deleted successfully"}
-
+    return trip
