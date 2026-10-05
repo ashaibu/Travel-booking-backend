@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results — TravelGroup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body data-page="search">
+    <div id="navbar"></div>
+
+    <div class="max-w-3xl mx-auto py-10 px-4">
+        <a href="/static/index.html" class="tg-text-dim text-sm hover:text-white">&larr; New Search</a>
+        <h1 class="text-2xl font-bold mt-2 mb-1">Available Trips</h1>
+        <p id="searchSummary" class="tg-text-dim mb-6"></p>
+        <div id="resultsList"></div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

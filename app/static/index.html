@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TravelGroup — Fly, Ride, or Sail</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body data-page="home">
+    <div id="navbar"></div>
+
+    <div class="tg-hero h-[420px] flex items-center justify-center text-center px-4"
+         style="background-image: url('https://images.unsplash.com/photo-1436491865332-7a61a109cc05?q=80&w=1400');">
+        <div>
+            <h1 class="text-4xl md:text-5xl font-extrabold mb-3">Go Anywhere — Air, Road, or Sea</h1>
+            <p class="tg-text-dim text-lg max-w-xl mx-auto">Search flights, buses, and ferries, and book your seat in minutes.</p>
+        </div>
+    </div>
+
+    <div class="max-w-3xl mx-auto -mt-16 relative z-10 px-4">
+        <div class="tg-surface rounded-2xl p-6 shadow-2xl">
+            <div class="flex gap-2 mb-5">
+                <button type="button" data-mode-tab="flights" class="px-4 py-2 rounded-lg text-sm font-semibold tg-surface-2">✈ Flights</button>
+                <button type="button" data-mode-tab="buses" class="px-4 py-2 rounded-lg text-sm font-semibold tg-surface-2">🚌 Buses</button>
+                <button type="button" data-mode-tab="ships" class="px-4 py-2 rounded-lg text-sm font-semibold tg-surface-2">⛴ Ships</button>
+            </div>
+            <form id="searchForm" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <input id="origin" placeholder="From (e.g. Lagos)" class="p-3 rounded-lg outline-none">
+                <input id="destination" placeholder="To (e.g. Abuja)" class="p-3 rounded-lg outline-none">
+                <input id="travelDate" type="date" class="p-3 rounded-lg outline-none">
+                <button type="submit" class="tg-accent font-bold rounded-lg py-3">Search</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="max-w-5xl mx-auto py-20 px-4 text-center tg-text-dim">
+        <p>Log in to book — new here? <a href="/static/register.html" style="color: var(--accent)" class="underline">Create an account</a>.</p>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
