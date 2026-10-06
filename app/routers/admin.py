@@ -19,7 +19,7 @@ from app.services import trips as trip_service
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(get_current_admin)])
 
 
-# ---- Trips ---------------------------------------------------------------
+# ---- Top Trips ---------------------------------------------------------------
 @router.get("/trips", response_model=list[TripOut])
 def list_all_trips(db: Session = Depends(get_db)):
     return db.query(Trip).order_by(Trip.departure_time).all()
