@@ -1,127 +1,77 @@
-# TravelGroup — Multimodal Travel Booking Platform
+# ASAA Travel — Python Edition
 
-FastAPI backend + static HTML/Tailwind/vanilla JS frontend, one repo, same
-pattern as ASAA Travel but with a real SQLite database instead of
-in-memory state, JWT auth instead of localStorage-only "sessions", and
-**server-side Flutterwave payment verification** instead of trusting the
-browser callback.
+A straight port of the Go/Gin version to Python/Flask — same routes, same
+in-memory data, same behavior. If you know the Go version, nothing here
+will surprise you; `main.py` is the `main.go` of this project.
 
-## Running it
+| Go concept | Python equivalent |
+|---|---|
+| Gin router + handler funcs | Flask `@app.get`/`@app.post` decorators |
+| `html/template` | Jinja2 (`templates/`, same files, `{{.Field}}` → `{{ field }}`) |
+| `sync.Mutex` | `threading.Lock` |
+| `map[string]User` | `dict` |
+| `[]TicketApplication` | `list[dict]` |
+| `go run .` | `python main.py` |
 
-```bash
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-```
-
-Visit `http://localhost:8000`. A `travel.db` SQLite file is created
-automatically, and an admin account is seeded on first startup (see
-Environment Variables below for the login).
-
-## Running the tests
+## Running it locally
 
 ```bash
-pytest
+pip install -r requirements.txt --break-system-packages   # or use a venv
+python main.py
 ```
 
-10 tests, all passing — covers register/login, admin trip CRUD, trip
-search per mode, booking creation + seat reservation, per-user "My
-Tickets" scoping, payment initiation, and booking cancellation + seat
-release. (Payment *verification* isn't tested — it calls the real
-Flutterwave API with the secret key, which needs live sandbox
-credentials and network access this test suite doesn't have.)
+Visit `http://localhost:8080`.
 
-## Who owns what
+- Customer demo login: `traveler@example.com` / `user123`
+- Admin login (same form): `admin` / `adminpassword123`
 
-```
-travel-group-project/
-├── app/
-│   ├── main.py                  Person 1 — app entrypoint, routers, static mount, admin seed
-│   ├── database.py              Person 1 — SQLAlchemy engine/session
-│   ├── auth.py                  Person 1 — password hashing + JWT
-│   ├── schemas.py                Person 1 — request/response shapes
-│   ├── models/                  split by owner:
-│   │   ├── user.py               Person 1 — User
-│   │   ├── trip.py               Person 1 — Trip (flights/buses/ships share this table via `mode`)
-│   │   ├── booking.py            Person 3 — Booking
-│   │   └── payment.py            Person 3 — Payment
-│   ├── services/
-│   │   └── trips.py             Person 1 — shared search/CRUD logic used by all 3 mode routers
-│   ├── routers/
-│   │   ├── auth.py               Person 1 — register/login
-│   │   ├── users.py              Person 1 — profile (GET/PUT /users/me)
-│   │   ├── flights.py            Person 1 — GET /flights (mode="flight")
-│   │   ├── buses.py              Person 1 — GET /buses   (mode="bus")
-│   │   ├── ships.py              Person 1 — GET /ships   (mode="ship")
-│   │   ├── bookings.py           Person 3 — seat reservation, booking ref, cancellation
-│   │   ├── payments.py           Person 3 — Flutterwave initiate + SERVER-SIDE verify
-│   │   └── admin.py              Person 4 — trip CRUD, bookings/payments/users oversight
-│   └── static/                  Person 2 (you):
-│       ├── index.html            Home — mode tabs + search
-│       ├── search.html           Results list
-│       ├── trip-details.html     Single trip + Book button
-│       ├── login.html / register.html
-│       ├── checkout.html         Passenger details + Flutterwave launch
-│       ├── booking-confirmation.html
-│       ├── my-tickets.html       Booking history
-│       ├── profile.html
-│       ├── admin.html            Person 4 — dashboard UI (trip management + bookings table)
-│       ├── css/style.css         Person 2 / 4 — dark theme
-│       └── js/
-│           ├── api.js            Person 2 — every backend call lives here
-│           └── app.js            Person 2 — per-page logic, dispatched by <body data-page="...">
-├── tests/
-│   └── test_app.py              Person 4 — pytest suite (isolated in-memory test DB)
-├── requirements.txt
-└── README.md
-```
+## Features (same as the Go version)
 
-## Environment variables
+- **One login form for everyone.** `/login` posts to `/api/auth/login`,
+  which checks admin credentials first, then falls back to customer
+  accounts, and tells the frontend which role matched. No separate
+  Admin Portal link anywhere in the nav.
+- **Admin can create AND edit price tags.** The pricing table on
+  `/admin` has an Edit button per row; submitting the form again for
+  the same destination+mode overwrites the price (upsert by key).
+- **NGN checkout.** Flutterwave checkout runs in Naira with
+  `card, banktransfer, ussd, account` as payment options (the right
+  set for Nigeria).
+- **"My Tickets" page.** Logged-in customers see their own application
+  history at `/my-tickets`, filtered server-side by their email.
+- **Secrets via environment variables**, with local-dev fallbacks so
+  running it untouched still works. Same variable names as the Go
+  version — see the table below.
 
-| Key | Purpose | Default (local dev) |
-|---|---|---|
-| `DATABASE_URL` | SQLAlchemy connection string | `sqlite:///./travel.db` |
-| `JWT_SECRET` | Signs auth tokens — **set a real one in production** | `dev-secret-change-me` |
-| `JWT_EXPIRE_MINUTES` | Token lifetime | `1440` (24h) |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Seeded admin login | `admin@travelgroup.ng` / `adminpassword123` |
-| `FLUTTERWAVE_PUBLIC_KEY` | Sent to the browser for checkout | test placeholder |
-| `FLUTTERWAVE_SECRET_KEY` | Used server-side to verify payments — **never expose this** | test placeholder |
+## Environment variables (for deployment, e.g. Render)
 
-## How the pieces connect
+| Key | Purpose |
+|---|---|
+| `ADMIN_USERNAME` | Admin login identifier |
+| `ADMIN_PASSWORD` | Admin login password |
+| `SMTP_EMAIL` | "From" address for ticket emails |
+| `SMTP_APP_PASSWORD` | App password for that mailbox |
+| `SMTP_HOST` | SMTP server (default `smtp.gmail.com`) |
+| `SMTP_PORT` | SMTP port (default `587`) |
+| `FLUTTERWAVE_PUBLIC_KEY` | Your Flutterwave **publishable** key |
 
-```
-Browser (Person 2's static pages)
-     │  fetch() via js/api.js, JWT in Authorization header
-     ▼
-FastAPI routers (Person 1: auth/users/flights/buses/ships,
-                 Person 3: bookings/payments,
-                 Person 4: admin)
-     │  SQLAlchemy session
-     ▼
-SQLite (travel.db) — Users, Trips, Bookings, Payments
-```
+`PORT` is injected automatically by most hosts (including Render) —
+the app reads it, you don't need to set it yourself.
 
-Booking + payment flow (checkout.html → app.js → api.js):
-```
-POST /bookings            → seat reserved, status="pending_payment"
-POST /payments/initiate   → returns Flutterwave public key + tx_ref
-FlutterwaveCheckout(...)  → browser opens payment modal
-callback                  → POST /payments/verify
-                              → backend calls Flutterwave's verify
-                                endpoint SERVER-SIDE with the secret key,
-                                checks amount/currency/status itself
-                              → only THEN does status flip to "confirmed"
-```
+## Deploying on Render
 
-## Notes for whoever picks up Person 3 or Person 4's work next
+Same idea as the Go version, different start command:
 
-- **Refunds** (`bookings.py::cancel_booking`) are stubbed — cancelling a
-  *paid* booking releases the seat but doesn't call Flutterwave's refund
-  API yet. Needs live secret-key credentials to build against.
-- **Admin bookings/payments tables** are read-only in `admin.html` right
-  now — no edit/refund actions wired up from the UI yet.
-- Two real bugs came up building this that are worth knowing about if
-  you touch auth: (1) `passlib`'s bcrypt backend breaks on
-  `bcrypt>=4.1` — keep the `bcrypt==4.0.1` pin in `requirements.txt`
-  unless you upgrade passlib too; (2) pydantic's `EmailStr` rejects
-  RFC 2606 reserved domains (`example.com`, anything ending `.test`)
-  — don't use those in seed data, fixtures, or demo accounts.
+- **Build Command:** `pip install -r requirements.txt`
+- **Start Command:** `python main.py`
+
+Everything else — the Environment Variables tab, the deploy flow — works
+exactly the way it did for the Go service.
+
+## Known gaps (carried over from the Go version, not fixed here)
+
+- "Sessions" are just a flag in `localStorage` — no real server-side
+  session/token. Not production-grade auth.
+- All data (users, applications, pricing) is in-memory and resets on
+  restart — no database.
+- Passwords are stored in plaintext in memory.
