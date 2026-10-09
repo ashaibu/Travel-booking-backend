@@ -21,6 +21,11 @@ from flask import Flask, jsonify, render_template, request
 app = Flask(__name__)
 
 
+@app.get("/health")
+def health_check():
+    return jsonify({"status": "ok"})
+
+
 def env_or_default(key: str, fallback: str) -> str:
     """Read an environment variable, falling back to a default for local dev."""
     return os.environ.get(key) or fallback
