@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout — TravelGroup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://checkout.flutterwave.com/v3.js"></script>
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body data-page="checkout">
+    <div id="navbar"></div>
+
+    <div class="max-w-xl mx-auto py-10 px-4">
+        <h1 class="text-2xl font-bold mb-1">Complete Your Booking</h1>
+        <p class="tg-text-dim mb-6">Your seat is reserved for 10 minutes while you complete payment.</p>
+
+        <div id="checkoutSummary" class="tg-surface rounded-xl p-5 mb-6">Loading…</div>
+
+        <form id="checkoutForm" class="tg-surface rounded-xl p-6 space-y-4">
+            <div>
+                <label class="text-sm tg-text-dim">Passenger Full Name</label>
+                <input type="text" id="passengerName" required class="mt-1 w-full p-3 rounded-lg outline-none">
+            </div>
+            <div>
+                <label class="text-sm tg-text-dim">Passenger Phone</label>
+                <input type="tel" id="passengerPhone" required class="mt-1 w-full p-3 rounded-lg outline-none">
+            </div>
+            <div>
+                <label class="text-sm tg-text-dim">Seat Number</label>
+                <input type="text" id="seatNumber" placeholder="e.g. 14A" required class="mt-1 w-full p-3 rounded-lg outline-none">
+            </div>
+            <button type="submit" class="w-full tg-accent font-bold py-3 rounded-lg">Reserve & Pay</button>
+        </form>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
